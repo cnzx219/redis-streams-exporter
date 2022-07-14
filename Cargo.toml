@@ -32,6 +32,5 @@ hyper = { version = "0.14", features = ["full"] }
 lazy_static = "1.4.0"
 
 # Redis library for rust
-# https://github.com/sfackler/r2d2
 # https://github.com/mitsuhiko/redis-rs
-redis = { version = "0.19.0", features = ["tokio-comp", "r2d2", "streams"], default-features = false }
+redis = { version = "0.21.5", features = ["tokio-comp", "streams"], default-features = false }
