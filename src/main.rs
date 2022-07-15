@@ -26,6 +26,8 @@ struct Args {
     #[clap(short = 'b', long = "bind", default_value = "127.0.0.1:9219")]
     bind: String,
 
+    #[clap(short = 'i', long = "calc-idle", action)]
+    calc_idle: bool,
 }
 
 lazy_static! {
@@ -120,8 +122,10 @@ impl Metrics {
         strs.push(sv_quick_join(&self.redis_stream_latest_id, "redis_stream_latest_id"));
         strs.push(String::from("# HELP redis_stream_consumer_groups_total Number of consumer groups for the stream\n# TYPE redis_stream_consumer_groups_total gauge"));
         strs.push(sv_quick_join(&self.redis_stream_consumer_groups_total, "redis_stream_consumer_groups_total"));
-        strs.push(String::from("# HELP redis_stream_idle The epoch timestamp of producer idle on the stream\n# TYPE redis_stream_idle gauge"));
-        strs.push(sv_quick_join(&self.redis_stream_idle, "redis_stream_idle"));
+        if CONFIG.calc_idle {
+            strs.push(String::from("# HELP redis_stream_idle The epoch timestamp of producer idle on the stream\n# TYPE redis_stream_idle gauge"));
+            strs.push(sv_quick_join(&self.redis_stream_idle, "redis_stream_idle"));
+        }
         // group
         strs.push(String::from("# HELP redis_stream_consumer_group_last_delivered_id The epoch timestamp of the last delivered message\n# TYPE redis_stream_consumer_group_last_delivered_id gauge"));
         strs.push(sv_quick_join(&self.redis_stream_consumer_group_last_delivered_id, "redis_stream_consumer_group_last_delivered_id"));
@@ -164,10 +168,12 @@ async fn get_metrics() -> Metrics {
         ret.redis_stream_latest_id.push(SV {stream: stream_key.to_string(), value: stream_info_reply.last_entry.id});
         ret.redis_stream_consumer_groups_total.push(SV {stream: stream_key.to_string(), value: stream_info_reply.groups.to_string()});
 
-        let splited_id = stream_info_reply.last_generated_id.split("-").collect::<Vec<&str>>();
-        let id = splited_id.get(0).unwrap().parse::<u128>().unwrap();
-        let gap = (now - id) / 1000;
-        ret.redis_stream_idle.push(SV {stream: stream_key.to_string(), value: gap.to_string()});
+        if CONFIG.calc_idle {
+            let splited_id = stream_info_reply.last_generated_id.split("-").collect::<Vec<&str>>();
+            let id = splited_id.get(0).unwrap().parse::<u128>().unwrap();
+            let gap = (now - id) / 1000;
+            ret.redis_stream_idle.push(SV {stream: stream_key.to_string(), value: gap.to_string()});
+        }
 
         let groups_info_reply: redis::streams::StreamInfoGroupsReply = conn.xinfo_groups(stream_key.to_owned()).unwrap();
         for group in &groups_info_reply.groups {
