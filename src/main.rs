@@ -20,7 +20,7 @@ struct Args {
     #[clap(short = 'k', long = "key", require_equals = true)]
     key: String,
 
-    #[clap(short = 'r', long = "redis", default_value = "redis://127.0.0.1/0")]
+    #[clap(short = 'r', long = "redis", default_value = "redis://127.0.0.1:6379/0")]
     redis: String,
 
     #[clap(short = 'b', long = "bind", default_value = "127.0.0.1:9219")]
